@@ -1,0 +1,15 @@
+{
+	"packageUrl": "http://xjl-0907.oss-cn-hangzhou.aliyuncs.com/test/", 
+	"remoteManifestUrl": "http://xjl-0907.oss-cn-hangzhou.aliyuncs.com/test/project.manifest",
+	"remoteVersionUrl": "http://xjl-0907.oss-cn-hangzhou.aliyuncs.com/test/version.manifest",
+	"version" : "1.0.1",
+	"groupVersions":{
+		"1" : "1.0.1"
+	},
+	 "assets":{
+		 xxx.zip:这里丢你的热更包。zip 丢在这里 然后把这两个。manifest 文件和。zip 一起丢到服务器就可以了 都是自动的
+		 
+       
+	},
+	"engineVersion" : "3.1"
+}

@@ -1,0 +1,738 @@
+/**
+ * Created by zhoufan on 2016/7/23.
+ */
+
+var MJReplayLayout = cc.Class.extend({
+
+    initData:function(direct,mPanel,oPanel,hPanel,seat){
+        this.direct = direct;
+        this.seat = seat || null;
+        this.mPanel = mPanel;
+        this.oPanel = oPanel;
+        this.hPanel = hPanel;
+        this.data1 = [];
+        this.data2 = [];
+        this.data3 = [];
+        this.data4 = [];
+        this.mahjongs1 = [];
+        this.mahjongs2 = [];
+        this.mahjongs3 = [];
+    },
+
+    /**
+     *
+     * @param id {number}
+     */
+    moPai:function(id){
+        var mjVo = id>0 ? MJAI.getMJDef(id) : {};
+        mjVo.m = 1;
+        this.data1.push(mjVo);
+        this.refreshP1(this.data1);
+    },
+
+    /**
+     * 箭头
+     */
+    showFinger:function(id){
+        var lastMahjong = this.mahjongs3[this.mahjongs3.length-1];
+        if(!lastMahjong)
+            return;
+        if(id && lastMahjong.getData().c!=id)
+            return;
+        var finger = this.oPanel.getChildByTag(777);
+        if(!finger){
+            finger = new cc.Sprite("res/ui/mj/zzmjRoom/finger.png");
+            finger.anchorX=finger.anchorY=0;
+            this.oPanel.addChild(finger,1000,777);
+        }
+        finger.setLocalZOrder(1000);
+        finger.x = lastMahjong.x+lastMahjong.width/2;
+        if(this.direct==1||this.direct==3)
+            finger.x -=30;
+        if(this.direct==2||this.direct==4)
+            finger.x -=32;
+        var initY = lastMahjong.y+lastMahjong.height/2;
+        //if(this.direct==1||this.direct==3)
+        //    initY+=0;
+        //if(this.direct==2||this.direct==4)
+        //    initY+=0;
+        finger.y = initY;
+        finger.visible = true;
+        finger.stopAllActions();
+        finger.runAction(cc.sequence(cc.moveTo(0.8,finger.x,initY+20),cc.moveTo(0.5,finger.x,initY)).repeatForever());
+    },
+
+    getData2WithClone:function(data){
+        var result=[];
+        for(var i=0;i<data.length;i++){
+            var innerObject = data[i];//{action:1,cards:[{t:4,n:10,i:202,c:207,dan:0}],danType:1}
+            var cloneObject = {};
+            cloneObject.action = innerObject.action;
+            var cards = ArrayUtil.clone(innerObject.cards);
+            for(var j=0;j<cards.length;j++){
+                var card = cards[j];//{t:4,n:10,i:202,c:207,dan:0}
+                var clonedCard = {};
+                for(var key in card){
+                    clonedCard[key] = card[key];
+                }
+                cards[j] = clonedCard;
+            }
+            cloneObject.cards = cards;
+            cloneObject.danType = innerObject.danType;
+            cloneObject.huxi = innerObject.huxi;
+            cloneObject.temp = innerObject.temp;
+            result.push(cloneObject);
+        }
+        return result;
+    },
+
+    findBaoPai:function(){
+        //for(var i=0;i<this.mahjongs1.length;i++){
+        //    this.mahjongs1[i].BaoPaiDisplay();
+        //}
+        //for(var i=0;i<this.mahjongs2.length;i++) {
+        //    this.mahjongs2[i].BaoPaiDisplay();
+        //}
+        //for(var i=0;i<this.mahjongs3.length;i++){
+        //    this.mahjongs3[i].BaoPaiDisplay();
+        //}
+    },
+
+
+    xiaohu:function(ids){
+        this.oPanel.removeAllChildren(true);
+        var data = [];
+        for(var j=0;j<ids.length;j++){
+            data.push(MJAI.getMJDef(ids[j]));
+        }
+        data.sort(MJAI.sortMJ);
+        var g,initVal;
+        switch (this.direct){
+            case 1:
+                g = 36;
+                initVal = (this.oPanel.width-data.length*g)/2;
+                //initVal = data.length>13 ? -40 : -30;
+                break;
+            case 2:
+                g = 25;
+                initVal = (this.oPanel.height-data.length*g)/2;
+                //initVal = data.length>13 ? 50 : 65;
+                break;
+            case 3:
+                g = 36;
+                initVal = data.length*g+(this.oPanel.width-data.length*g)/2;
+                //initVal = data.length>13 ? 431 : 450;
+                break;
+            case 4:
+                g = 25;
+                initVal = data.length*g+(this.oPanel.height-data.length*g)/2;
+                //initVal = data.length>13 ? 380 : 370;
+                break;
+        }
+        var zorder = data.length;
+        for(var i=0;i<data.length;i++){
+            var card = new Mahjong(MJAI.getDisplayVo(this.direct,3),data[i]);
+            if(this.direct==1){
+                card.x = initVal+i*g;
+            }else if(this.direct==3){
+                card.x = initVal-i*g;
+            }else if(this.direct==2){
+                card.x = 0;
+            }else{
+                card.x = 30;
+            }
+            if(this.direct==4){
+                card.setLocalZOrder(i);
+                card.y = initVal-i*g;
+            }else if(this.direct==2){
+                card.setLocalZOrder(zorder);
+                card.y = initVal+i*g;
+            }else{
+                card.y = 42;
+                if(this.direct==3)
+                    card.y = 0;
+            }
+            this.oPanel.addChild(card);
+            card.xiaoHu();
+            zorder--;
+        }
+    },
+
+    /**
+     *
+     * @param mjVo {MJVo}
+     */
+    chuPai:function(mjVo,isCsGang){
+        isCsGang = isCsGang || false;
+        this.data3.push(mjVo);
+        this.refreshP3(this.data3);
+        if(!isCsGang)
+            this.delFromPlace1(mjVo.c);
+        this.showFinger();
+    },
+
+    hideFinger:function(){
+        var finger = this.oPanel.getChildByTag(777);
+        if(finger){
+            finger.stopAllActions();
+            finger.visible = false;
+        }
+    },
+
+    /**
+     * 删除place1的麻将
+     * @param id
+     */
+    delFromPlace1:function(id){
+        var del = -1;
+        for(var i=0;i<this.data1.length;i++){
+            var c = this.data1[i].c;
+            if(c == id){
+                del = i;
+                break;
+            }
+        }
+        if(del>=0){
+            this.data1.splice(del,1);
+            var mahjong = this.mahjongs1.splice(del,1);
+            if(mahjong.length>0)
+                mahjong[0].pushOut();
+            this.data1.sort(MJAI.sortMJ);
+            this.refreshP1(this.data1);
+        }
+    },
+
+    /**
+     * 碰、杠操作
+     * @param ids
+     */
+    pengPai:function(ids,action,fromSeat){
+        var voArray = MJAI.getVoArray(ids);
+        var hasInsert = false;
+        var vo0 = voArray[0];
+        if(action==MJAction.XIA_DAN && ids.length==1){//补蛋，需要特殊处理下
+            if(MJAI.isYiTiao(vo0)){//一条特殊处理
+                for(var i=0;i<this.data2.length;i++){
+                    var innerObj = this.data2[i];
+                    if(innerObj.danType==MJDanType.BU_YI_TIAO){
+                        innerObj.cards.push(vo0);
+                        hasInsert = true;
+                        break;
+                    }
+                }
+                if(!hasInsert)
+                    this.data2.push({action:action,cards:voArray,huxi:-1});
+            }else{
+                var curType = MJAI.findDanType(voArray);
+                //找到已有的下了蛋的类型，将补蛋的这张牌放进去
+                for(var i=0;i<this.data2.length;i++){
+                    var innerObj = this.data2[i];
+                    if(innerObj.danType==curType){
+                        var cards = innerObj.cards;
+                        var isExist = MJAI.isExistInDan(cards,vo0);
+                        cards.push(vo0);//当我用南风补蛋的时候，这里操作的数据其实是MJReplayModel.getDataByStep(0,1).data2
+                        //如果已有的下了的蛋内含有一条，需要把一条踢出去
+                        var yitiaoIndex = MJAI.getYiTiaoIndexInArray(cards);
+                        if(yitiaoIndex>=0&&!isExist){
+                            var delArray = cards.splice(yitiaoIndex,1);
+                            this.pengPai([delArray[0].c],action,0);
+                        }
+                        break;
+                    }
+                }
+            }
+        }else if((action==MJAction.GANG||action==MJAction.BU_ZHANG) && ids.length==1){//先碰后杠
+            for(var i=0;i<this.data2.length;i++){
+                var innerObj = this.data2[i];
+                if(innerObj.action==MJAction.PENG){
+                    var curVo0 = innerObj.cards[0];
+                    if(curVo0.t==vo0.t&&curVo0.n==vo0.n){
+                        innerObj.cards.push(vo0);
+                        innerObj.action = action;
+                        break;
+                    }
+                }
+            }
+        }else{
+            this.data2.push({action:action,cards:voArray});
+        }
+        this.refreshP2(this.data2);
+        if(action==MJAction.CHI){
+            ids.splice(1,1);
+        }else if(action==MJAction.XIA_DAN){
+            //noting to do
+        }else{
+            if(action!=MJAction.AN_GANG && action!=MJAction.BU_ZHANG
+                && ids.length>1)
+                ids.pop();
+            if(action==MJAction.BU_ZHANG&&ids.length>3&&fromSeat)//补张在手上有三个，别人打来一个时，需要踢出最后一个
+                ids.pop();
+        }
+        if(this.direct!=1&&this.data1.length<=1){
+            this.refreshP1(this.data1);
+            return;
+        }
+        for(var i=0;i<ids.length;i++) {
+            this.delFromPlace1(ids[i]);
+        }
+    },
+
+
+    huPai:function(isZiMo,fromSeat,fromMJ){
+        var last = null;
+        if (isZiMo) {
+            last = this.data1[this.data1.length-1];
+            this.delFromPlace1(last.c);
+        } else if (fromMJ) {
+            last = MJAI.getMJDef(fromMJ);
+        }
+        if (last) {
+            var isHas = false;
+            for (var i=0;i<this.data4.length;i++) {
+                var cards = this.data4[i].cards;
+                if (last.c == cards[0]) {
+                    isHas = true;
+                    break;
+                }
+            }
+            if (!isHas) {
+                this.data4.push({action:isZiMo ? 1 : 0,cards:[last.c],huxi:fromSeat});
+                this.refreshP4(this.data4);
+            }
+        }
+        return last;
+    },
+
+    /**
+     * 被碰牌的place3需要更新数据
+     * @param id {number}
+     */
+    beiPengPai:function(id){
+        var del = -1;
+        for(var i=0;i<this.data3.length;i++){
+            if(this.data3[i].c == id){
+                del = i;
+                break;
+            }
+        }
+        if(del>=0){
+            this.data3.splice(del,1);
+            var mahjong = this.mahjongs3.splice(del,1);
+            if(mahjong.length>0)
+                mahjong[0].pushOut();
+        }
+    },
+
+    getPlace1Data:function(){
+        return this.data1;
+    },
+
+    getPlace2Data:function(){
+        return this.data2;
+    },
+
+    getMahjongs1:function(){
+        return this.mahjongs1;
+    },
+
+    clean:function(){
+        this.mPanel.removeAllChildren(true);
+        this.oPanel.removeAllChildren(true);
+        this.hPanel.removeAllChildren(true);
+        this.mahjongs1.length=0;
+        this.mahjongs2.length=0;
+        this.mahjongs3.length=0;
+    },
+
+
+    refreshByCurData:function(data1,data2,data3){
+        this.mahjongs1.length=this.mahjongs2.length=this.mahjongs3.length=0;
+        this.mPanel.removeAllChildren(true);
+        this.oPanel.removeAllChildren(true);
+        this.refreshP2(this.getData2WithClone(data2));
+        this.refreshP1(ArrayUtil.clone(data1));
+        this.refreshP3(ArrayUtil.clone(data3));
+    },
+
+    /**
+     *
+     * @param data1 {Array.<MJVo>}
+     * @param data2 {Array.<MJVo>}
+     * @param data3 {Array.<MJVo>}
+     * @param data4 {Array.<MJVo>}
+     */
+    refresh:function(data1,data2,data3,data4){
+        data1 = this.transData(data1,true);
+        data2 = this.transData(data2,false);
+        data3 = this.transData(data3,false);
+        this.data1 = data1;
+        this.data2 = data2;
+        this.data3 = data3;
+        this.refreshP2(data2);
+        this.refreshP1(data1);
+        this.refreshP3(data3);
+    },
+
+    /**
+     * 转换前台需要的数据
+     * @param ids
+     * @param isSort
+     * @returns {Array}
+     */
+    transData:function(ids,isSort) {
+        var cardIds = [];
+        for(var j=0;j<ids.length;j++){
+            cardIds.push(MJAI.getMJDef(ids[j]));
+        }
+        if(isSort && cardIds.length>0){
+            cardIds.sort(MJAI.sortMJ);
+        }
+        return cardIds;
+    },
+
+    handleWithPlace2:function(innerObject){
+        var voArray = innerObject.cards;
+        var isBuYiTiao = innerObject.huxi<0;
+        var result = [];
+        if(isBuYiTiao){
+            innerObject.danType = MJDanType.BU_YI_TIAO;
+        }else{
+            innerObject.danType = MJAI.findDanType(voArray);
+        }
+        for(var i=0;i<voArray.length;i++){
+            var vo = MJAI.getMJDef(voArray[i].c);
+            if(isBuYiTiao || (vo.t!=1||vo.n!=1)){
+                var isHas = false;
+                for(var j=0;j<result.length;j++){
+                    if(result[j].n==vo.n && result[j].t==vo.t){
+                        result[j].dan += 1;
+                        isHas = true;
+                        break;
+                    }
+                }
+                if(!isHas){
+                    vo.dan = 1;
+                    result.push(vo);
+                }
+            }else{
+                result.push(vo);
+            }
+        }
+        return result;
+    },
+
+    changeMahjongRes:function(){
+        for(var i=0;i<this.mahjongs1.length;i++){
+            this.mahjongs1[i].diplay();
+        }
+        for(var i=0;i<this.mahjongs2.length;i++){
+            this.mahjongs2[i].diplay();
+        }
+        for(var i=0;i<this.mahjongs3.length;i++){
+            this.mahjongs3[i].diplay();
+        }
+    },
+
+    /**
+     * refresh place1
+     * @param data {Array.<MJVo>}
+     */
+    refreshP1:function(data){
+        this.data1 = data;
+        var gapMapping = {1:89,2:32,3:40,4:32};
+        var g=gapMapping[this.direct];
+        var initVal=this.p2Mark;
+        var correctCoord = function(direct,card,i,zorder){
+            if(direct==1){
+                card.x = initVal+i*g;
+                card.setLocalZOrder(1);
+            }else if(direct==3){
+                card.x = initVal-i*g;
+            }else{
+                card.x = (direct==4) ? -8 : 0;
+            }
+            if(direct==4){
+                card.y = initVal-i*g;
+            }else if(direct==2) {
+                card.y = initVal+i*g;
+                card.setLocalZOrder(zorder);
+            }else{
+                card.y = 0;
+            }
+            if(data[i].hasOwnProperty("m") || i>12){//摸牌的处理
+                if(direct==1)
+                    card.x += 27;
+                if(direct==2)
+                    card.y += 25;
+                if(direct==3)
+                    card.x -= 16;
+                if(direct==4)
+                    card.y -= 25;
+            }
+            card.initCoord();
+        }
+        var place = (this.direct==1) ? 1 : 3;
+        var zorder = this.data1.length;
+        for(var i=0;i<this.mahjongs1.length;i++){
+            var card = this.mahjongs1[i];
+            correctCoord(this.direct,card,i,zorder);
+            zorder--;
+            card.refresh(MJAI.getDisplayVo(this.direct,place),data[i]);
+        }
+        for(;i<data.length;i++){
+            var card = new Mahjong(MJAI.getDisplayVo(this.direct,place),data[i]);
+            this.mahjongs1.push(card);
+            correctCoord(this.direct,card,i,zorder);
+            zorder--;
+            this.mPanel.addChild(card);
+        }
+    },
+
+    /**
+     * refresh place2
+     * @param data {Array.<MJVo>}
+     */
+    refreshP2:function(data){
+        this.data2 = data;
+        var g,initVal;
+        switch (this.direct){
+            case 1:
+                g = 60;
+                initVal = 5;
+                break;
+            case 2:
+                g = 28;
+                initVal = 0;
+                break;
+            case 3:
+                g = 41;
+                initVal = (data.length==0) ? 535 : 545;
+                break;
+            case 4:
+                g = 28;
+                initVal = 500-(MJAI.MJ_NUMBER-this.data2.length-1)*7;
+                break;
+        }
+        var zorder = this.data2.length;
+        var count = 0;
+        var nowCards = this.mahjongs2.length;
+        for(var i=0;i<data.length;i++) {
+            var innerObject = data[i];
+            var innerAction = innerObject.action;
+            var innerArray = innerObject.cards;
+            var gangVo = null;
+            if((innerAction==MJAction.AN_GANG||innerAction==MJAction.GANG) && (innerArray.length>3 || innerObject.temp)){
+                if(innerObject.temp){
+                    gangVo = innerObject.temp;
+                }else {
+                    gangVo = innerArray.pop();
+                    innerObject.temp = gangVo;
+                }
+            }
+            if(innerAction==MJAction.XIA_DAN){
+                innerArray = this.handleWithPlace2(innerObject);
+            }
+            var mod = i;
+            for(var j=0;j<innerArray.length;j++){
+                var card = null;
+                var innerVo = innerArray[j];
+                if(innerAction==MJAction.AN_GANG)
+                    innerVo.a = 1;
+                if(count<nowCards){
+                    card = this.mahjongs2.shift();
+                    card.refresh(MJAI.getDisplayVo(this.direct,2),innerVo);
+                }else{
+                    card = new Mahjong(MJAI.getDisplayVo(this.direct,2),innerVo);
+                    this.mPanel.addChild(card);
+                }
+                this.mahjongs2.push(card);
+                //处理下坐标,每束牌需要隔开显示
+                if(this.direct==1){
+                    card.x = initVal+count*g+10*mod;
+                }else if(this.direct==3) {
+                    card.x = initVal-count*g-10*mod;
+                }else{
+                    card.x = 0;
+                }
+                if(this.direct==2){
+                    card.y = initVal+count*g+15*mod;
+                    card.setLocalZOrder(zorder);
+                }else if(this.direct==4){
+                    card.y = initVal-count*g-15*mod;
+                }else{
+                    card.y = 0;
+                }
+                //杠的牌需要放一张牌到上面去
+                if(gangVo  && j==1){
+                    if(innerAction==MJAction.AN_GANG && this.direct!=1)
+                        gangVo.a = 1;
+                    var gang = new Mahjong(MJAI.getDisplayVo(this.direct,2),gangVo);
+                    if(this.direct==1)
+                        gang.y = 20;
+                    if(this.direct==2)
+                        gang.y += 12;
+                    if(this.direct==3)
+                        gang.y += 12;
+                    if(this.direct==4)
+                        gang.y += 12;
+                    card.addChild(gang);
+                }
+                zorder--;
+                count++;
+            }
+        }
+        if(this.direct==1)
+            this.p2Mark = data.length>0 ? card.x+90 : initVal;
+        if(this.direct==2)
+            this.p2Mark = data.length>0 ? card.y+55 : initVal+this.data2.length*5;
+        if(this.direct==3)
+            this.p2Mark = data.length>0 ? card.x-55 : initVal;
+        if(this.direct==4)
+            this.p2Mark = data.length>0 ? card.y-60 : initVal;
+    },
+
+    /**
+     * refresh place3
+     * @param data {Array.<MJVo>}
+     */
+    refreshP3:function(data){
+        this.data3 = data;
+        var g,initVal;
+        switch (this.direct){
+            case 1:
+                g = 40;
+                initVal = 34;
+                break;
+            case 2:
+                g = 33;
+                initVal = g;
+                break;
+            case 3:
+                g = 40;
+                initVal = this.oPanel.width-g-34;
+                break;
+            case 4:
+                g = 33;
+                initVal = this.oPanel.height-g;
+                break;
+        }
+        var zorder = this.data3.length;
+        for(var i=0;i<this.mahjongs3.length;i++){
+            this.mahjongs3[i].refresh(MJAI.getDisplayVo(this.direct,3),data[i]);
+            if(this.direct==2)
+                this.mahjongs3[i].setLocalZOrder(zorder);
+            zorder--;
+        }
+        var rowCount = 10;
+        for(;i<data.length;i++){
+            var card = new Mahjong(MJAI.getDisplayVo(this.direct,3),data[i]);
+            this.mahjongs3.push(card);
+            if(this.direct==1){
+                card.x = initVal+(i%rowCount)*g;
+            }else if(this.direct==3){
+                card.x = initVal-(i%rowCount)*g;
+            }else{
+                card.x = 0;
+                if(i < rowCount){
+                    if(this.direct==2)
+                        card.x = -28;
+                    if(this.direct==4)
+                        card.x = 58;
+                }else if(i >= rowCount && i < rowCount*2){
+                    if(this.direct==2)
+                        card.x=30;
+                }else {
+                    if(this.direct==2)
+                        card.x = 88;
+                    if(this.direct==4)
+                        card.x = -58;
+                }
+            }
+            if(this.direct==4){
+                card.setLocalZOrder(i);
+                card.y = initVal-(i%rowCount)*g;
+            }else if(this.direct==2){
+                card.setLocalZOrder(zorder);
+                card.y = initVal+(i%rowCount)*g;
+            }else{
+                card.y = 0;
+                if(i < rowCount){
+                    if(this.direct==1)
+                        card.y = 50;
+                    if(this.direct==3)
+                        card.y = 0;
+                    card.setLocalZOrder((this.direct==3) ? 10 : 2);
+                } else if(i >= rowCount && i < rowCount*2) {
+                    card.setLocalZOrder((this.direct==3) ? 2 : 10);
+                    if(this.direct==1)
+                        card.y=0;
+                    if(this.direct==3)
+                        card.y=50;
+                } else {
+                    card.setLocalZOrder((this.direct==3) ? 1 : 11);
+                    if(this.direct==1)
+                        card.y=-50;
+                    if(this.direct==3)
+                        card.y=100;
+                }
+            }
+            this.oPanel.addChild(card);
+            zorder--;
+        }
+    },
+
+    refreshP4: function(data) {
+        this.data4 = data;
+        var g,initVal;
+        switch (this.direct){
+            case 1:
+                g = 30;
+                initVal=0;
+                break;
+            case 2:
+                g = 20;
+                initVal = this.p2Mark;
+                break;
+            case 3:
+                g = 30;
+                initVal = 500;
+                break;
+            case 4:
+                g = 20;
+                initVal = this.p2Mark;
+                break;
+        }
+        this.hPanel.removeAllChildren(true);
+        var zorder = this.data3.length;
+        for(var i=0;i<data.length;i++) {
+            var innerObject = data[i];
+            var vo = MJAI.getMJDef(innerObject.cards[0]);
+            var huRecord = MJReplayModel.getHuRecordById(this.seat,vo.c);
+            if (huRecord && huRecord.ext[1] > 0) {
+                var paoSeq = MJRoomModel.getPlayerSeq("", MJReplayModel.mySeat, huRecord.ext[1]);
+                vo.jt = MJRoomModel.getPaoJianTou(paoSeq);
+            }
+            var card = new Mahjong(MJAI.getDisplayVo(this.direct,4),vo);
+            card.x = initVal+g*i;
+            card.y = 0;
+            if(this.direct==1){
+                card.x = initVal+i*g;
+            }else if(this.direct==3){
+                card.x = initVal-i*g;
+            }else{
+                card.x = 0;
+            }
+            if(this.direct==4){
+                card.setLocalZOrder(i);
+                card.y = initVal-i*g;
+            }else if(this.direct==2){
+                card.setLocalZOrder(zorder);
+                card.y = initVal+i*g;
+            }else{
+                card.y = 0;
+            }
+            this.hPanel.addChild(card);
+            zorder--;
+        }
+    }
+});

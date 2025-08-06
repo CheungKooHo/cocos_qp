@@ -1,0 +1,13 @@
+{
+	"packageUrl": "http://xjl-0907.oss-cn-hangzhou.aliyuncs.com/test/", 
+	"remoteManifestUrl": "http://xjl-0907.oss-cn-hangzhou.aliyuncs.com/test/project.manifest",
+	"remoteVersionUrl": "http://xjl-0907.oss-cn-hangzhou.aliyuncs.com/test/version.manifest",
+	"version" : "1.0.0",
+	"groupVersions":{
+		"1" : "1.0.0"
+	},
+	 "assets":{
+       
+	},
+	"engineVersion" : "3.1"
+}
